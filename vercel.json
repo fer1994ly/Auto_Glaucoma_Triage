@@ -2,27 +2,17 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/*.js",
-      "use": "@vercel/node",
-      "config": {
-        "maxDuration": 30,
-        "includeFiles": "public/**"
-      }
-    },
-    {
-      "src": "public/**",
-      "use": "@vercel/static"
+      "src": "api/analyze.js",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
     {
-      "src": "/api/analyze",
-      "dest": "/api/analyze.js",
-      "methods": ["POST", "OPTIONS"]
-    },
-    {
       "src": "/(.*)",
-      "dest": "/public/$1"
+      "dest": "/api/analyze.js"
     }
-  ]
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
 } 

@@ -6,8 +6,9 @@
   "scripts": {
     "start": "node api/analyze.js",
     "dev": "nodemon api/analyze.js",
-    "vercel-build": "npm install --omit=dev && sharp rebuild",
-    "postinstall": "sharp rebuild"
+    "vercel-build": "npm install && npm rebuild sharp",
+    "build": "npm install && npm rebuild sharp",
+    "postinstall": "npm rebuild sharp"
   },
   "dependencies": {
     "@google/generative-ai": "^0.3.0",
