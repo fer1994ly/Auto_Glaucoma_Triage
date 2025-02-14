@@ -12,12 +12,16 @@
     ],
     "routes": [
         {
-            "src": "/api/(.*)",
+            "src": "/analyze",
             "dest": "/server.js"
         },
         {
             "src": "/(.*)",
-            "dest": "/public/$1"
+            "dest": "/public/$1",
+            "continue": true
+        },
+        {
+            "handle": "filesystem"
         }
     ],
     "env": {
