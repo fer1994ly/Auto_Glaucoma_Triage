@@ -41,8 +41,14 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 // Add error handling middleware
 const handleError = (err, req, res) => {
     console.error('Error:', err);
-    res.status(err.status || 500).json({
-        error: err.message || 'Internal Server Error'
+    const errorMessage = err.message || 'Internal Server Error';
+    const statusCode = err.status || 500;
+    
+    // Ensure we're sending a proper JSON response
+    res.status(statusCode).json({
+        error: errorMessage,
+        status: statusCode,
+        timestamp: new Date().toISOString()
     });
 };
 
@@ -60,7 +66,7 @@ async function processDocument(fileBuffer, mimeType) {
             mimeType = 'image/png';
         } catch (err) {
             console.error('TIFF conversion error:', err);
-            throw new Error('Failed to process TIFF image');
+            throw new Error('Failed to process TIFF image: ' + err.message);
         }
     }
 
@@ -94,11 +100,17 @@ async function processDocument(fileBuffer, mimeType) {
     try {
         if (mimeType === 'application/pdf') {
             const pdfData = await pdfParse(fileBuffer);
+            if (!pdfData || !pdfData.text) {
+                throw new Error('Failed to extract text from PDF');
+            }
             requestData.contents[0].parts.push({
                 text: pdfData.text
             });
         } else if (mimeType.startsWith('image/')) {
             const base64Image = fileBuffer.toString('base64');
+            if (!base64Image) {
+                throw new Error('Failed to convert image to base64');
+            }
             requestData.contents[0].parts.push({
                 inline_data: {
                     mime_type: mimeType,
@@ -106,7 +118,7 @@ async function processDocument(fileBuffer, mimeType) {
                 }
             });
         } else {
-            throw new Error('Unsupported file type');
+            throw new Error(`Unsupported file type: ${mimeType}`);
         }
 
         const response = await fetch(
@@ -122,7 +134,7 @@ async function processDocument(fileBuffer, mimeType) {
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(`Gemini API Error: ${errorData.error?.message || 'Unknown error'}`);
+            throw new Error(errorData.error?.message || `Gemini API Error: ${response.status}`);
         }
 
         const data = await response.json();
@@ -133,7 +145,7 @@ async function processDocument(fileBuffer, mimeType) {
         return data.candidates[0].content.parts[0].text;
     } catch (error) {
         console.error('Error processing document:', error);
-        throw error;
+        throw new Error(`Failed to process document: ${error.message}`);
     }
 }
 
@@ -142,7 +154,8 @@ module.exports = async (req, res) => {
     // Set CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Accept');
+    res.setHeader('Content-Type', 'application/json');
 
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
@@ -161,7 +174,7 @@ module.exports = async (req, res) => {
         await new Promise((resolve, reject) => {
             upload(req, res, (err) => {
                 if (err) {
-                    reject(err);
+                    reject(new Error(`File upload failed: ${err.message}`));
                 } else {
                     resolve();
                 }
@@ -173,7 +186,11 @@ module.exports = async (req, res) => {
         }
 
         const analysis = await processDocument(req.file.buffer, req.file.mimetype);
-        res.status(200).json({ analysis });
+        res.status(200).json({ 
+            success: true,
+            analysis,
+            timestamp: new Date().toISOString()
+        });
     } catch (error) {
         handleError(error, req, res);
     }

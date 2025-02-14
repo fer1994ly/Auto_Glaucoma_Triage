@@ -100,39 +100,60 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            const contentType = response.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                throw new Error('Received invalid response from server');
+            let data;
+            try {
+                data = await response.json();
+            } catch (e) {
+                throw new Error('Invalid response format from server');
             }
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Analysis failed');
+                throw new Error(data.error || 'Analysis failed');
             }
 
-            const data = await response.json();
+            if (!data.success || !data.analysis) {
+                throw new Error('Invalid response data from server');
+            }
+
             displayResults(data.analysis);
         } catch (error) {
             console.error('Error:', error);
             alert(`Processing failed: ${error.message}`);
+            resultsSection.style.display = 'none';
         } finally {
             loadingSpinner.style.display = 'none';
         }
     }
 
     function displayResults(analysis) {
+        if (!analysis) {
+            throw new Error('No analysis data received');
+        }
+
         // Parse the analysis text and extract relevant information
         const sections = analysis.split('\n').reduce((acc, line) => {
-            if (line.includes('Triage Priority:')) {
-                acc.triagePriority = line.split(':')[1].trim();
-            } else if (line.includes('Appointment Type:')) {
-                acc.appointmentType = line.split(':')[1].trim();
-            } else if (line.includes('Visual Field Test Requirement:')) {
-                acc.visualFieldTest = line.split(':')[1].trim();
-            } else if (line.includes('Key Clinical Findings:')) {
-                acc.clinicalFindings = line.split(':')[1].trim();
-            } else if (line.includes('Reasoning:')) {
-                acc.reasoning = line.split(':')[1].trim();
+            const parts = line.split(':');
+            if (parts.length < 2) return acc;
+
+            const key = parts[0].trim();
+            const value = parts.slice(1).join(':').trim();
+
+            switch(key) {
+                case 'Triage Priority':
+                    acc.triagePriority = value;
+                    break;
+                case 'Appointment Type':
+                    acc.appointmentType = value;
+                    break;
+                case 'Visual Field Test Requirement':
+                    acc.visualFieldTest = value;
+                    break;
+                case 'Key Clinical Findings':
+                    acc.clinicalFindings = value;
+                    break;
+                case 'Reasoning':
+                    acc.reasoning = value;
+                    break;
             }
             return acc;
         }, {});
