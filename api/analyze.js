@@ -157,10 +157,13 @@ module.exports = async (req, res) => {
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Accept');
     res.setHeader('Content-Type', 'application/json');
 
+    // Handle preflight requests
     if (req.method === 'OPTIONS') {
-        return res.status(200).end();
+        res.status(200).end();
+        return;
     }
 
+    // Only allow POST requests
     if (req.method !== 'POST') {
         return handleError({ status: 405, message: 'Method not allowed' }, req, res);
     }
@@ -171,6 +174,7 @@ module.exports = async (req, res) => {
             throw new Error('GEMINI_API_KEY is not configured');
         }
 
+        // Handle file upload
         await new Promise((resolve, reject) => {
             upload(req, res, (err) => {
                 if (err) {
@@ -185,7 +189,10 @@ module.exports = async (req, res) => {
             throw new Error('No file uploaded');
         }
 
+        // Process the document
         const analysis = await processDocument(req.file.buffer, req.file.mimetype);
+        
+        // Send successful response
         res.status(200).json({ 
             success: true,
             analysis,
