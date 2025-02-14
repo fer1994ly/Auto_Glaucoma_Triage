@@ -1,9 +1,11 @@
+require('dotenv').config();
 const multer = require('multer');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const pdfParse = require('pdf-parse');
 const path = require('path');
+const fetch = require('node-fetch');
 
-// Configure multer for file upload
+// Configure multer for memory storage
 const storage = multer.memoryStorage();
 const upload = multer({ 
     storage: storage,
@@ -15,12 +17,10 @@ const upload = multer({
             'image/jpeg',
             'image/png'
         ];
-        // Check file extension as well for TIFF files
         const ext = path.extname(file.originalname).toLowerCase();
         if (allowedTypes.includes(file.mimetype) || 
             ext === '.tif' || 
             ext === '.tiff') {
-            // For TIFF files, override the mimetype
             if (ext === '.tif' || ext === '.tiff') {
                 file.mimetype = 'image/tiff';
             }
@@ -29,7 +29,7 @@ const upload = multer({
             cb(new Error('Invalid file type. Only PDF, TIFF, JPEG, and PNG files are allowed.'));
         }
     }
-});
+}).single('document');
 
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -58,19 +58,16 @@ async function processDocument(fileBuffer, mimeType) {
         }]
     };
 
-    // Add the system prompt as the first part
     requestData.contents[0].parts.push({
         text: systemPrompt
     });
 
-    // Process different file types
     if (mimeType === 'application/pdf') {
         const pdfData = await pdfParse(fileBuffer);
         requestData.contents[0].parts.push({
             text: pdfData.text
         });
     } else if (mimeType.startsWith('image/')) {
-        // For images, we need to convert to base64
         const base64Image = fileBuffer.toString('base64');
         requestData.contents[0].parts.push({
             inline_data: {
@@ -109,30 +106,45 @@ async function processDocument(fileBuffer, mimeType) {
     }
 }
 
-// Vercel serverless function
+// Export the serverless function
 module.exports = async (req, res) => {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    try {
-        // Handle file upload using multer
-        const uploadMiddleware = upload.single('document');
-        await new Promise((resolve, reject) => {
-            uploadMiddleware(req, res, (err) => {
-                if (err) reject(err);
-                resolve();
-            });
-        });
+    // Handle CORS
+    res.setHeader('Access-Control-Allow-Credentials', true);
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
+    res.setHeader(
+        'Access-Control-Allow-Headers',
+        'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+    );
 
-        if (!req.file) {
-            return res.status(400).json({ error: 'No file uploaded' });
-        }
-
-        const analysis = await processDocument(req.file.buffer, req.file.mimetype);
-        res.json({ analysis });
-    } catch (error) {
-        console.error('Error processing document:', error);
-        res.status(500).json({ error: error.message || 'Error processing document' });
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
     }
+
+    return new Promise((resolve, reject) => {
+        upload(req, res, async (err) => {
+            if (err) {
+                console.error('Upload error:', err);
+                resolve(res.status(400).json({ error: err.message }));
+                return;
+            }
+
+            try {
+                if (!req.file) {
+                    resolve(res.status(400).json({ error: 'No file uploaded' }));
+                    return;
+                }
+
+                const analysis = await processDocument(req.file.buffer, req.file.mimetype);
+                resolve(res.status(200).json({ analysis }));
+            } catch (error) {
+                console.error('Processing error:', error);
+                resolve(res.status(500).json({ error: error.message || 'Error processing document' }));
+            }
+        });
+    });
 }; 
