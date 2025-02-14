@@ -6,17 +6,14 @@
   "scripts": {
     "start": "node api/analyze.js",
     "dev": "nodemon api/analyze.js",
-    "vercel-build": "npm install && npm rebuild sharp --build-from-source",
-    "build": "npm install && npm rebuild sharp --build-from-source",
-    "postinstall": "npm rebuild sharp --build-from-source"
+    "vercel-build": "npm install",
+    "build": "npm install"
   },
   "dependencies": {
     "@google/generative-ai": "^0.3.0",
     "express": "^4.18.2",
     "dotenv": "^16.3.1",
-    "multer": "^1.4.5-lts.1",
     "pdf-parse": "^1.1.1",
-    "sharp": "^0.33.2",
     "node-fetch": "^3.3.2"
   },
   "devDependencies": {

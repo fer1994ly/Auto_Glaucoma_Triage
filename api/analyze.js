@@ -1,39 +1,7 @@
 require('dotenv').config();
-const multer = require('multer');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const pdfParse = require('pdf-parse');
-const path = require('path');
 const fetch = require('node-fetch');
-const sharp = require('sharp');
-
-// Configure multer for memory storage
-const storage = multer.memoryStorage();
-
-// Modify the upload configuration
-const upload = multer({
-    storage: storage,
-    limits: {
-        fileSize: 10 * 1024 * 1024 // 10MB limit
-    },
-    fileFilter: (req, file, cb) => {
-        const allowedTypes = [
-            'application/pdf',
-            'image/tiff',
-            'image/x-tiff',
-            'image/jpeg',
-            'image/png'
-        ];
-        const ext = path.extname(file.originalname).toLowerCase();
-        const validMime = allowedTypes.includes(file.mimetype);
-        const validExt = ['.pdf','.tif','.tiff','.jpg','.jpeg','.png'].includes(ext);
-        
-        if (validMime || validExt) {
-            cb(null, true);
-        } else {
-            cb(new Error('Invalid file type. Only PDF, TIFF, JPEG, and PNG files are allowed.'));
-        }
-    }
-}).single('document');
 
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -55,19 +23,6 @@ const handleError = (err, req, res) => {
 async function processDocument(fileBuffer, mimeType) {
     if (!fileBuffer || !mimeType) {
         throw new Error('Invalid file data');
-    }
-
-    // Convert TIFF to PNG for better compatibility
-    if (mimeType === 'image/tiff' || mimeType === 'image/x-tiff') {
-        try {
-            fileBuffer = await sharp(fileBuffer)
-                .png()
-                .toBuffer();
-            mimeType = 'image/png';
-        } catch (err) {
-            console.error('TIFF conversion error:', err);
-            throw new Error('Failed to process TIFF image: ' + err.message);
-        }
     }
 
     const systemPrompt = `Analyze this glaucoma referral document and provide a structured response with the following:
@@ -174,25 +129,39 @@ module.exports = async (req, res) => {
             throw new Error('GEMINI_API_KEY is not configured');
         }
 
-        // Handle file upload
-        await new Promise((resolve, reject) => {
-            upload(req, res, (err) => {
-                if (err) {
-                    reject(new Error(`File upload failed: ${err.message}`));
-                } else {
-                    resolve();
-                }
-            });
-        });
+        // Get the raw body buffer
+        const chunks = [];
+        for await (const chunk of req) {
+            chunks.push(chunk);
+        }
+        const buffer = Buffer.concat(chunks);
 
-        if (!req.file) {
-            throw new Error('No file uploaded');
+        // Parse multipart form data manually
+        const boundary = req.headers['content-type'].split('boundary=')[1];
+        const parts = buffer.toString().split('--' + boundary);
+        
+        let fileBuffer = null;
+        let mimeType = null;
+
+        // Find the file part
+        for (const part of parts) {
+            if (part.includes('Content-Type:')) {
+                const contentType = part.match(/Content-Type: (.*?)\r\n/)[1];
+                const content = part.split('\r\n\r\n')[1].split('\r\n')[0];
+                
+                if (contentType === 'application/pdf' || contentType.startsWith('image/')) {
+                    mimeType = contentType;
+                    fileBuffer = Buffer.from(content, 'binary');
+                    break;
+                }
+            }
         }
 
-        // Process the document
-        const analysis = await processDocument(req.file.buffer, req.file.mimetype);
-        
-        // Send successful response
+        if (!fileBuffer || !mimeType) {
+            throw new Error('No valid file uploaded');
+        }
+
+        const analysis = await processDocument(fileBuffer, mimeType);
         res.status(200).json({ 
             success: true,
             analysis,
