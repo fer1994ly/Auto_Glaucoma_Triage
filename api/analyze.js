@@ -39,22 +39,27 @@ const upload = multer({
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // Add error handling middleware
-const handleError = (err, req, res, next) => {
-    res.status(400).json({
-        error: err.message
+const handleError = (err, req, res) => {
+    console.error('Error:', err);
+    res.status(err.status || 500).json({
+        error: err.message || 'Internal Server Error'
     });
 };
 
 async function processDocument(fileBuffer, mimeType) {
+    if (!fileBuffer || !mimeType) {
+        throw new Error('Invalid file data');
+    }
+
     // Convert TIFF to PNG for better compatibility
     if (mimeType === 'image/tiff' || mimeType === 'image/x-tiff') {
         try {
-            const pngBuffer = await sharp(fileBuffer)
+            fileBuffer = await sharp(fileBuffer)
                 .png()
                 .toBuffer();
             mimeType = 'image/png';
-            fileBuffer = pngBuffer;
         } catch (err) {
+            console.error('TIFF conversion error:', err);
             throw new Error('Failed to process TIFF image');
         }
     }
@@ -86,22 +91,24 @@ async function processDocument(fileBuffer, mimeType) {
         text: systemPrompt
     });
 
-    if (mimeType === 'application/pdf') {
-        const pdfData = await pdfParse(fileBuffer);
-        requestData.contents[0].parts.push({
-            text: pdfData.text
-        });
-    } else if (mimeType.startsWith('image/')) {
-        const base64Image = fileBuffer.toString('base64');
-        requestData.contents[0].parts.push({
-            inline_data: {
-                mime_type: mimeType,
-                data: base64Image
-            }
-        });
-    }
-
     try {
+        if (mimeType === 'application/pdf') {
+            const pdfData = await pdfParse(fileBuffer);
+            requestData.contents[0].parts.push({
+                text: pdfData.text
+            });
+        } else if (mimeType.startsWith('image/')) {
+            const base64Image = fileBuffer.toString('base64');
+            requestData.contents[0].parts.push({
+                inline_data: {
+                    mime_type: mimeType,
+                    data: base64Image
+                }
+            });
+        } else {
+            throw new Error('Unsupported file type');
+        }
+
         const response = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${process.env.GEMINI_API_KEY}`,
             {
@@ -119,55 +126,55 @@ async function processDocument(fileBuffer, mimeType) {
         }
 
         const data = await response.json();
-        if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-            return data.candidates[0].content.parts[0].text;
-        } else {
+        if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
             throw new Error('Invalid response format from Gemini API');
         }
+
+        return data.candidates[0].content.parts[0].text;
     } catch (error) {
         console.error('Error processing document:', error);
         throw error;
     }
 }
 
-// Add consistent JSON response middleware
-const handleResponse = (req, res, next) => {
-    res.setHeader('Content-Type', 'application/json');
-    next();
-};
-
 // Update serverless function handler
 module.exports = async (req, res) => {
-    handleResponse(req, res, async () => {
-        if (req.method === 'OPTIONS') {
-            return res.status(200).end();
+    // Set CORS headers
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
+
+    if (req.method !== 'POST') {
+        return handleError({ status: 405, message: 'Method not allowed' }, req, res);
+    }
+
+    try {
+        // Check if GEMINI_API_KEY is configured
+        if (!process.env.GEMINI_API_KEY) {
+            throw new Error('GEMINI_API_KEY is not configured');
         }
 
-        if (req.method !== 'POST') {
-            return res.status(405).json({ error: 'Method not allowed' });
-        }
-
-        try {
-            await new Promise((resolve, reject) => {
-                upload(req, res, async (err) => {
-                    if (err) {
-                        return reject(err);
-                    }
+        await new Promise((resolve, reject) => {
+            upload(req, res, (err) => {
+                if (err) {
+                    reject(err);
+                } else {
                     resolve();
-                });
+                }
             });
+        });
 
-            if (!req.file) {
-                return res.status(400).json({ error: 'No file uploaded' });
-            }
-
-            const analysis = await processDocument(req.file.buffer, req.file.mimetype);
-            res.status(200).json({ analysis });
-        } catch (error) {
-            console.error('Error:', error);
-            res.status(500).json({ 
-                error: error.message.replace(/[^a-zA-Z0-9 .,-]/g, '') 
-            });
+        if (!req.file) {
+            throw new Error('No file uploaded');
         }
-    });
+
+        const analysis = await processDocument(req.file.buffer, req.file.mimetype);
+        res.status(200).json({ analysis });
+    } catch (error) {
+        handleError(error, req, res);
+    }
 }; 
