@@ -4,11 +4,17 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const pdfParse = require('pdf-parse');
 const path = require('path');
 const fetch = require('node-fetch');
+const sharp = require('sharp');
 
 // Configure multer for memory storage
 const storage = multer.memoryStorage();
-const upload = multer({ 
+
+// Modify the upload configuration
+const upload = multer({
     storage: storage,
+    limits: {
+        fileSize: 10 * 1024 * 1024 // 10MB limit
+    },
     fileFilter: (req, file, cb) => {
         const allowedTypes = [
             'application/pdf',
@@ -18,12 +24,10 @@ const upload = multer({
             'image/png'
         ];
         const ext = path.extname(file.originalname).toLowerCase();
-        if (allowedTypes.includes(file.mimetype) || 
-            ext === '.tif' || 
-            ext === '.tiff') {
-            if (ext === '.tif' || ext === '.tiff') {
-                file.mimetype = 'image/tiff';
-            }
+        const validMime = allowedTypes.includes(file.mimetype);
+        const validExt = ['.pdf','.tif','.tiff','.jpg','.jpeg','.png'].includes(ext);
+        
+        if (validMime || validExt) {
             cb(null, true);
         } else {
             cb(new Error('Invalid file type. Only PDF, TIFF, JPEG, and PNG files are allowed.'));
@@ -34,7 +38,27 @@ const upload = multer({
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
+// Add error handling middleware
+const handleError = (err, req, res, next) => {
+    res.status(400).json({
+        error: err.message
+    });
+};
+
 async function processDocument(fileBuffer, mimeType) {
+    // Convert TIFF to PNG for better compatibility
+    if (mimeType === 'image/tiff' || mimeType === 'image/x-tiff') {
+        try {
+            const pngBuffer = await sharp(fileBuffer)
+                .png()
+                .toBuffer();
+            mimeType = 'image/png';
+            fileBuffer = pngBuffer;
+        } catch (err) {
+            throw new Error('Failed to process TIFF image');
+        }
+    }
+
     const systemPrompt = `Analyze this glaucoma referral document and provide a structured response with the following:
     1. Triage Priority: Urgent or Routine
     2. Appointment Type: Face-to-face or Virtual
@@ -106,45 +130,44 @@ async function processDocument(fileBuffer, mimeType) {
     }
 }
 
-// Export the serverless function
+// Add consistent JSON response middleware
+const handleResponse = (req, res, next) => {
+    res.setHeader('Content-Type', 'application/json');
+    next();
+};
+
+// Update serverless function handler
 module.exports = async (req, res) => {
-    if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method not allowed' });
-    }
+    handleResponse(req, res, async () => {
+        if (req.method === 'OPTIONS') {
+            return res.status(200).end();
+        }
 
-    // Handle CORS
-    res.setHeader('Access-Control-Allow-Credentials', true);
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
-    res.setHeader(
-        'Access-Control-Allow-Headers',
-        'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-    );
+        if (req.method !== 'POST') {
+            return res.status(405).json({ error: 'Method not allowed' });
+        }
 
-    if (req.method === 'OPTIONS') {
-        return res.status(200).end();
-    }
+        try {
+            await new Promise((resolve, reject) => {
+                upload(req, res, async (err) => {
+                    if (err) {
+                        return reject(err);
+                    }
+                    resolve();
+                });
+            });
 
-    return new Promise((resolve, reject) => {
-        upload(req, res, async (err) => {
-            if (err) {
-                console.error('Upload error:', err);
-                resolve(res.status(400).json({ error: err.message }));
-                return;
+            if (!req.file) {
+                return res.status(400).json({ error: 'No file uploaded' });
             }
 
-            try {
-                if (!req.file) {
-                    resolve(res.status(400).json({ error: 'No file uploaded' }));
-                    return;
-                }
-
-                const analysis = await processDocument(req.file.buffer, req.file.mimetype);
-                resolve(res.status(200).json({ analysis }));
-            } catch (error) {
-                console.error('Processing error:', error);
-                resolve(res.status(500).json({ error: error.message || 'Error processing document' }));
-            }
-        });
+            const analysis = await processDocument(req.file.buffer, req.file.mimetype);
+            res.status(200).json({ analysis });
+        } catch (error) {
+            console.error('Error:', error);
+            res.status(500).json({ 
+                error: error.message.replace(/[^a-zA-Z0-9 .,-]/g, '') 
+            });
+        }
     });
 }; 

@@ -56,10 +56,27 @@ document.addEventListener('DOMContentLoaded', () => {
         if (files.length === 0) return;
         
         const file = files[0];
-        const allowedTypes = ['application/pdf', 'image/tiff', 'image/jpeg', 'image/png'];
+        const allowedTypes = [
+            'application/pdf',
+            'image/tiff',
+            'image/x-tiff',
+            'image/jpeg',
+            'image/png'
+        ];
         
-        if (!allowedTypes.includes(file.type)) {
+        // Validate file type
+        const ext = file.name.split('.').pop().toLowerCase();
+        const validType = allowedTypes.includes(file.type) || 
+                         ['tif','tiff'].includes(ext);
+        
+        if (!validType) {
             alert('Please upload a PDF, TIFF, JPEG, or PNG file.');
+            return;
+        }
+
+        // Validate file size
+        if (file.size > 10 * 1024 * 1024) {
+            alert('File size exceeds 10MB limit');
             return;
         }
 
@@ -77,19 +94,27 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch('/api/analyze', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                headers: {
+                    'Accept': 'application/json'
+                }
             });
+
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Received invalid response from server');
+            }
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.error || 'Network response was not ok');
+                throw new Error(errorData.error || 'Analysis failed');
             }
 
             const data = await response.json();
             displayResults(data.analysis);
         } catch (error) {
             console.error('Error:', error);
-            alert('An error occurred while processing the document: ' + error.message);
+            alert(`Processing failed: ${error.message}`);
         } finally {
             loadingSpinner.style.display = 'none';
         }
