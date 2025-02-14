@@ -44,7 +44,7 @@ const upload = multer({
 });
 
 // Initialize Gemini AI
-const genAI = new GoogleGenerativeAI('AIzaSyAg4HnknP0qh74ysNmr_t8rnnTSokT8trg');
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 async function processDocument(fileBuffer, mimeType) {
     const systemPrompt = `Analyze this glaucoma referral document and provide a structured response with the following:
@@ -94,7 +94,7 @@ async function processDocument(fileBuffer, mimeType) {
 
     try {
         const response = await fetch(
-            'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=AIzaSyAg4HnknP0qh74ysNmr_t8rnnTSokT8trg',
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${process.env.GEMINI_API_KEY}`,
             {
                 method: 'POST',
                 headers: {
