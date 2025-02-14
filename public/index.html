@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glaucoma Referral Triage System</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Glaucoma Referral Triage</h1>
+            <p class="subtitle">Upload a referral document for automated analysis</p>
+        </header>
+
+        <main>
+            <div class="upload-section">
+                <div class="upload-box" id="dropZone">
+                    <img src="upload-icon.svg" alt="Upload" id="uploadIcon">
+                    <p>Drag and drop your file here or</p>
+                    <label for="fileInput" class="upload-button">Choose File</label>
+                    <input type="file" id="fileInput" accept=".pdf,.tiff,.tif,.jpg,.jpeg,.png" hidden>
+                    <p class="file-info" id="fileInfo">Supported formats: PDF, TIFF, JPEG, PNG</p>
+                </div>
+            </div>
+
+            <div class="results-section" id="resultsSection" style="display: none;">
+                <h2>Analysis Results</h2>
+                <div class="results-container">
+                    <div class="result-item">
+                        <h3>Triage Priority</h3>
+                        <p id="triagePriority"></p>
+                    </div>
+                    <div class="result-item">
+                        <h3>Appointment Type</h3>
+                        <p id="appointmentType"></p>
+                    </div>
+                    <div class="result-item">
+                        <h3>Visual Field Test</h3>
+                        <p id="visualFieldTest"></p>
+                    </div>
+                    <div class="result-item full-width">
+                        <h3>Key Clinical Findings</h3>
+                        <p id="clinicalFindings"></p>
+                    </div>
+                    <div class="result-item full-width">
+                        <h3>Reasoning</h3>
+                        <p id="reasoning"></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="loading-spinner" id="loadingSpinner" style="display: none;">
+                <div class="spinner"></div>
+                <p>Analyzing document...</p>
+            </div>
+        </main>
+    </div>
+    <script src="main.js"></script>
+</body>
+</html> 
