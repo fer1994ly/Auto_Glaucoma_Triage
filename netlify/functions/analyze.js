@@ -2,22 +2,31 @@ require('dotenv').config();
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const pdfParse = require('pdf-parse');
 const fetch = require('node-fetch');
+const multipart = require('parse-multipart');
 
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // Add error handling middleware
-const handleError = (err, req, res) => {
+const handleError = (err) => {
     console.error('Error:', err);
     const errorMessage = err.message || 'Internal Server Error';
     const statusCode = err.status || 500;
     
-    // Ensure we're sending a proper JSON response
-    res.status(statusCode).json({
-        error: errorMessage,
-        status: statusCode,
-        timestamp: new Date().toISOString()
-    });
+    return {
+        statusCode,
+        body: JSON.stringify({
+            error: errorMessage,
+            status: statusCode,
+            timestamp: new Date().toISOString()
+        }),
+        headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Content-Type',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS'
+        }
+    };
 };
 
 async function processDocument(fileBuffer, mimeType) {
@@ -104,23 +113,24 @@ async function processDocument(fileBuffer, mimeType) {
     }
 }
 
-// Update serverless function handler
-module.exports = async (req, res) => {
-    // Set CORS headers
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Accept');
-    res.setHeader('Content-Type', 'application/json');
-
+// Netlify function handler
+exports.handler = async (event, context) => {
     // Handle preflight requests
-    if (req.method === 'OPTIONS') {
-        res.status(200).end();
-        return;
+    if (event.httpMethod === 'OPTIONS') {
+        return {
+            statusCode: 200,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS'
+            },
+            body: ''
+        };
     }
 
     // Only allow POST requests
-    if (req.method !== 'POST') {
-        return handleError({ status: 405, message: 'Method not allowed' }, req, res);
+    if (event.httpMethod !== 'POST') {
+        return handleError({ status: 405, message: 'Method not allowed' });
     }
 
     try {
@@ -129,31 +139,19 @@ module.exports = async (req, res) => {
             throw new Error('GEMINI_API_KEY is not configured');
         }
 
-        // Get the raw body buffer
-        const chunks = [];
-        for await (const chunk of req) {
-            chunks.push(chunk);
-        }
-        const buffer = Buffer.concat(chunks);
-
-        // Parse multipart form data manually
-        const boundary = req.headers['content-type'].split('boundary=')[1];
-        const parts = buffer.toString().split('--' + boundary);
+        // Parse multipart form data
+        const boundary = multipart.getBoundary(event.headers['content-type']);
+        const parts = multipart.Parse(Buffer.from(event.body, 'base64'), boundary);
         
         let fileBuffer = null;
         let mimeType = null;
 
         // Find the file part
         for (const part of parts) {
-            if (part.includes('Content-Type:')) {
-                const contentType = part.match(/Content-Type: (.*?)\r\n/)[1];
-                const content = part.split('\r\n\r\n')[1].split('\r\n')[0];
-                
-                if (contentType === 'application/pdf' || contentType.startsWith('image/')) {
-                    mimeType = contentType;
-                    fileBuffer = Buffer.from(content, 'binary');
-                    break;
-                }
+            if (part.filename) {
+                mimeType = part.type;
+                fileBuffer = part.data;
+                break;
             }
         }
 
@@ -162,12 +160,20 @@ module.exports = async (req, res) => {
         }
 
         const analysis = await processDocument(fileBuffer, mimeType);
-        res.status(200).json({ 
-            success: true,
-            analysis,
-            timestamp: new Date().toISOString()
-        });
+        
+        return {
+            statusCode: 200,
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            },
+            body: JSON.stringify({ 
+                success: true,
+                analysis,
+                timestamp: new Date().toISOString()
+            })
+        };
     } catch (error) {
-        handleError(error, req, res);
+        return handleError(error);
     }
 }; 

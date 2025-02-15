@@ -1,17 +1,21 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const dropZone = document.getElementById('dropZone');
-    const fileInput = document.getElementById('fileInput');
-    const fileInfo = document.getElementById('fileInfo');
-    const loadingSpinner = document.getElementById('loadingSpinner');
-    const resultsSection = document.getElementById('resultsSection');
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('upload-form');
+    const fileInput = document.getElementById('file-input');
+    const dropZone = document.getElementById('drop-zone');
+    const resultContainer = document.getElementById('result-container');
+    const loadingSpinner = document.getElementById('loading-spinner');
+    const uploadIcon = document.getElementById('upload-icon');
 
-    // Prevent default drag behaviors
+    // Drag and drop handlers
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         dropZone.addEventListener(eventName, preventDefaults, false);
-        document.body.addEventListener(eventName, preventDefaults, false);
     });
 
-    // Highlight drop zone when dragging over it
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
     ['dragenter', 'dragover'].forEach(eventName => {
         dropZone.addEventListener(eventName, highlight, false);
     });
@@ -20,151 +24,98 @@ document.addEventListener('DOMContentLoaded', () => {
         dropZone.addEventListener(eventName, unhighlight, false);
     });
 
-    // Handle dropped files
-    dropZone.addEventListener('drop', handleDrop, false);
-    
-    // Handle file input change
-    fileInput.addEventListener('change', (e) => {
-        handleFiles(e.target.files);
-    });
-
-    // Click on drop zone triggers file input
-    dropZone.addEventListener('click', () => {
-        fileInput.click();
-    });
-
-    function preventDefaults(e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
-
     function highlight(e) {
-        dropZone.classList.add('highlight');
+        dropZone.classList.add('border-blue-600');
     }
 
     function unhighlight(e) {
-        dropZone.classList.remove('highlight');
+        dropZone.classList.remove('border-blue-600');
     }
+
+    dropZone.addEventListener('drop', handleDrop, false);
 
     function handleDrop(e) {
         const dt = e.dataTransfer;
         const files = dt.files;
+        fileInput.files = files;
         handleFiles(files);
     }
 
+    fileInput.addEventListener('change', function(e) {
+        handleFiles(this.files);
+    });
+
     function handleFiles(files) {
-        if (files.length === 0) return;
-        
-        const file = files[0];
-        const allowedTypes = [
-            'application/pdf',
-            'image/tiff',
-            'image/x-tiff',
-            'image/jpeg',
-            'image/png'
-        ];
-        
-        // Validate file type
-        const ext = file.name.split('.').pop().toLowerCase();
-        const validType = allowedTypes.includes(file.type) || 
-                         ['tif','tiff'].includes(ext);
-        
-        if (!validType) {
-            alert('Please upload a PDF, TIFF, JPEG, or PNG file.');
-            return;
+        if (files.length > 0) {
+            const file = files[0];
+            if (file.type === 'application/pdf' || file.type.startsWith('image/')) {
+                uploadFile(file);
+            } else {
+                showError('Please upload a PDF document or image file.');
+            }
         }
-
-        // Validate file size
-        if (file.size > 10 * 1024 * 1024) {
-            alert('File size exceeds 10MB limit');
-            return;
-        }
-
-        fileInfo.textContent = `Selected file: ${file.name}`;
-        uploadFile(file);
     }
 
     async function uploadFile(file) {
         const formData = new FormData();
-        formData.append('document', file);
+        formData.append('file', file);
 
-        loadingSpinner.style.display = 'flex';
-        resultsSection.style.display = 'none';
+        showLoading();
 
         try {
-            const response = await fetch('/api/analyze', {
+            const response = await fetch('/.netlify/functions/analyze', {
                 method: 'POST',
-                body: formData,
-                headers: {
-                    'Accept': 'application/json'
-                }
+                body: formData
             });
 
-            let data;
-            try {
-                data = await response.json();
-            } catch (e) {
-                throw new Error('Invalid response format from server');
-            }
-
             if (!response.ok) {
-                throw new Error(data.error || 'Analysis failed');
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            if (!data.success || !data.analysis) {
-                throw new Error('Invalid response data from server');
+            const data = await response.json();
+            
+            if (data.success) {
+                showResult(data.analysis);
+            } else {
+                showError(data.error || 'An error occurred while processing the document.');
             }
-
-            displayResults(data.analysis);
         } catch (error) {
             console.error('Error:', error);
-            alert(`Processing failed: ${error.message}`);
-            resultsSection.style.display = 'none';
+            showError('An error occurred while uploading the file. Please try again.');
         } finally {
-            loadingSpinner.style.display = 'none';
+            hideLoading();
         }
     }
 
-    function displayResults(analysis) {
-        if (!analysis) {
-            throw new Error('No analysis data received');
-        }
+    function showLoading() {
+        loadingSpinner.classList.remove('hidden');
+        uploadIcon.classList.add('hidden');
+        resultContainer.innerHTML = '';
+        resultContainer.classList.add('hidden');
+    }
 
-        // Parse the analysis text and extract relevant information
-        const sections = analysis.split('\n').reduce((acc, line) => {
-            const parts = line.split(':');
-            if (parts.length < 2) return acc;
+    function hideLoading() {
+        loadingSpinner.classList.add('hidden');
+        uploadIcon.classList.remove('hidden');
+    }
 
-            const key = parts[0].trim();
-            const value = parts.slice(1).join(':').trim();
+    function showResult(analysis) {
+        resultContainer.innerHTML = `
+            <div class="bg-white p-6 rounded-lg shadow-lg">
+                <h3 class="text-xl font-bold mb-4">Analysis Results</h3>
+                <div class="whitespace-pre-wrap font-mono text-sm">${analysis}</div>
+            </div>
+        `;
+        resultContainer.classList.remove('hidden');
+    }
 
-            switch(key) {
-                case 'Triage Priority':
-                    acc.triagePriority = value;
-                    break;
-                case 'Appointment Type':
-                    acc.appointmentType = value;
-                    break;
-                case 'Visual Field Test Requirement':
-                    acc.visualFieldTest = value;
-                    break;
-                case 'Key Clinical Findings':
-                    acc.clinicalFindings = value;
-                    break;
-                case 'Reasoning':
-                    acc.reasoning = value;
-                    break;
-            }
-            return acc;
-        }, {});
-
-        // Update the DOM with results
-        document.getElementById('triagePriority').textContent = sections.triagePriority || 'Not specified';
-        document.getElementById('appointmentType').textContent = sections.appointmentType || 'Not specified';
-        document.getElementById('visualFieldTest').textContent = sections.visualFieldTest || 'Not specified';
-        document.getElementById('clinicalFindings').textContent = sections.clinicalFindings || 'Not specified';
-        document.getElementById('reasoning').textContent = sections.reasoning || 'Not specified';
-
-        resultsSection.style.display = 'block';
+    function showError(message) {
+        resultContainer.innerHTML = `
+            <div class="bg-red-50 p-6 rounded-lg shadow-lg">
+                <h3 class="text-xl font-bold text-red-700 mb-2">Error</h3>
+                <p class="text-red-600">${message}</p>
+            </div>
+        `;
+        resultContainer.classList.remove('hidden');
     }
 }); 

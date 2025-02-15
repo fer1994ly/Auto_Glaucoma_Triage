@@ -2,23 +2,21 @@
   "name": "auto-glaucoma-triage",
   "version": "1.0.0",
   "description": "Automated Glaucoma Referral Triage System using Gemini AI",
-  "main": "api/analyze.js",
+  "main": "netlify/functions/analyze.js",
   "scripts": {
-    "start": "node api/analyze.js",
-    "dev": "nodemon api/analyze.js",
-    "vercel-build": "npm install",
-    "build": "npm install"
+    "start": "netlify dev",
+    "build": "netlify build",
+    "dev": "netlify dev"
   },
   "dependencies": {
     "@google/generative-ai": "^0.3.0",
-    "express": "^4.18.2",
     "dotenv": "^16.3.1",
     "pdf-parse": "^1.1.1",
-    "node-fetch": "^3.3.2"
+    "node-fetch": "^3.3.2",
+    "parse-multipart": "^1.0.4"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2",
-    "vercel": "^34.0.0"
+    "netlify-cli": "^17.0.0"
   },
   "engines": {
     "node": ">=18.0.0"
