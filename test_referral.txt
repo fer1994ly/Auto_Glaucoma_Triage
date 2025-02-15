@@ -1,0 +1,1 @@
+Test Glaucoma Referral Patient Details: Age: 65 IOP: 28mmHg (right), 26mmHg (left) Cup-to-disc ratio: 0.7 Family history: Mother had glaucoma Symptoms: Blurred vision, eye pain Current medications: None

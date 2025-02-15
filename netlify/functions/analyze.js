@@ -2,7 +2,7 @@ require('dotenv').config();
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const pdfParse = require('pdf-parse');
 const fetch = require('node-fetch');
-const multipart = require('parse-multipart');
+const busboy = require('busboy');
 
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -63,7 +63,7 @@ async function processDocument(fileBuffer, mimeType) {
 
     try {
         if (mimeType === 'application/pdf') {
-            const pdfData = await pdfParse(fileBuffer);
+            const pdfData = await pdfParse(Buffer.from(fileBuffer));
             if (!pdfData || !pdfData.text) {
                 throw new Error('Failed to extract text from PDF');
             }
@@ -71,7 +71,7 @@ async function processDocument(fileBuffer, mimeType) {
                 text: pdfData.text
             });
         } else if (mimeType.startsWith('image/')) {
-            const base64Image = fileBuffer.toString('base64');
+            const base64Image = Buffer.from(fileBuffer).toString('base64');
             if (!base64Image) {
                 throw new Error('Failed to convert image to base64');
             }
@@ -139,40 +139,54 @@ exports.handler = async (event, context) => {
             throw new Error('GEMINI_API_KEY is not configured');
         }
 
-        // Parse multipart form data
-        const boundary = multipart.getBoundary(event.headers['content-type']);
-        const parts = multipart.Parse(Buffer.from(event.body, 'base64'), boundary);
-        
-        let fileBuffer = null;
-        let mimeType = null;
+        return new Promise((resolve, reject) => {
+            const bb = busboy({ headers: event.headers });
+            let fileBuffer = null;
+            let mimeType = null;
 
-        // Find the file part
-        for (const part of parts) {
-            if (part.filename) {
-                mimeType = part.type;
-                fileBuffer = part.data;
-                break;
-            }
-        }
+            bb.on('file', (name, file, info) => {
+                const chunks = [];
+                file.on('data', (data) => chunks.push(data));
+                file.on('end', () => {
+                    if (name === 'file') {
+                        fileBuffer = Buffer.concat(chunks);
+                        mimeType = info.mimeType;
+                    }
+                });
+            });
 
-        if (!fileBuffer || !mimeType) {
-            throw new Error('No valid file uploaded');
-        }
+            bb.on('finish', async () => {
+                try {
+                    if (!fileBuffer || !mimeType) {
+                        throw new Error('No valid file uploaded');
+                    }
 
-        const analysis = await processDocument(fileBuffer, mimeType);
-        
-        return {
-            statusCode: 200,
-            headers: {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-            },
-            body: JSON.stringify({ 
-                success: true,
-                analysis,
-                timestamp: new Date().toISOString()
-            })
-        };
+                    const analysis = await processDocument(fileBuffer, mimeType);
+                    
+                    resolve({
+                        statusCode: 200,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Access-Control-Allow-Origin': '*'
+                        },
+                        body: JSON.stringify({ 
+                            success: true,
+                            analysis,
+                            timestamp: new Date().toISOString()
+                        })
+                    });
+                } catch (error) {
+                    resolve(handleError(error));
+                }
+            });
+
+            bb.on('error', (error) => {
+                resolve(handleError(error));
+            });
+
+            const buffer = Buffer.from(event.body, 'base64');
+            bb.end(buffer);
+        });
     } catch (error) {
         return handleError(error);
     }

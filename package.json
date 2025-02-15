@@ -13,7 +13,7 @@
     "dotenv": "^16.3.1",
     "pdf-parse": "^1.1.1",
     "node-fetch": "^3.3.2",
-    "parse-multipart": "^1.0.4"
+    "busboy": "^1.6.0"
   },
   "devDependencies": {
     "netlify-cli": "^17.0.0"
