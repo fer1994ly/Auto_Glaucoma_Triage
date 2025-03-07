@@ -3,7 +3,7 @@ command = "npm run build"
 cwd = "."
 
 [build.upload]
-format = "service-worker"
+format = "directory"
 
 [site]
 bucket = "./public"

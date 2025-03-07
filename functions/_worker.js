@@ -1,3 +1,5 @@
+// Export both the index handler and the analyze POST handler
+export { onRequest } from './index.js';
 export { onRequestPost } from './analyze.js';
 
 // Mark dependencies as external
