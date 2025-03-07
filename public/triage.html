@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Glaucoma Referral Triage System</title>
+    <title>Glaucoma Referral Triage | AI-Powered Analysis</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.3.0/flowbite.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <meta name="description" content="Upload glaucoma referral documents for AI-powered triage recommendations, appointment types, and clinical insights.">
 </head>
 <body class="bg-gray-50">
     <!-- Navigation -->
@@ -41,57 +42,97 @@
     </nav>
 
     <!-- Main Content -->
-    <main class="pt-24 pb-16 px-4">
-        <div class="container">
-            <header>
-                <h1>Glaucoma Referral Triage</h1>
-                <p class="subtitle">Upload a referral document for automated analysis</p>
-            </header>
-
-            <main>
-                <div class="upload-section">
-                    <div class="upload-box" id="dropZone">
-                        <img src="upload-icon.svg" alt="Upload" id="uploadIcon">
-                        <p>Drag and drop your file here or</p>
-                        <label for="fileInput" class="upload-button">Choose File</label>
-                        <input type="file" id="fileInput" accept=".pdf,.tiff,.tif,.jpg,.jpeg,.png" hidden>
-                        <p class="file-info" id="fileInfo">Supported formats: PDF, TIFF, JPEG, PNG</p>
+    <main class="max-w-screen-xl mx-auto px-4 py-8">
+        <section class="mb-8">
+            <h1 class="text-4xl font-bold text-center mb-4">Glaucoma Referral Triage</h1>
+            <p class="text-center text-gray-600 max-w-2xl mx-auto mb-8">
+                Upload a referral document for AI-powered analysis and get instant triage recommendations, appointment types, and clinical insights.
+            </p>
+            
+            <!-- File Upload Section -->
+            <div class="upload-container">
+                <h2 class="text-xl font-semibold mb-4">Upload Referral Document</h2>
+                
+                <div id="dropZone" class="drop-zone" tabindex="0" role="button" aria-label="Upload referral document">
+                    <div class="upload-icon-container">
+                        <img src="upload-icon.svg" alt="" class="upload-icon" aria-hidden="true">
+                    </div>
+                    <h3 class="text-lg font-medium">Drag and drop your file here or</h3>
+                    <button class="mt-3 px-5 py-2.5 text-sm font-medium text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg">
+                        Choose File
+                    </button>
+                    <p class="text-sm text-gray-500 mt-2">Supported formats: PDF, TIFF, JPEG, PNG</p>
+                    <input type="file" id="fileInput" class="visually-hidden" accept=".pdf,.tiff,.tif,.jpg,.jpeg,.png">
+                </div>
+                <p id="fileInfo" class="mt-4"></p>
+            </div>
+            
+            <!-- Loading Spinner -->
+            <div id="loadingSpinner" class="spinner-container">
+                <div class="spinner" role="status" aria-label="Loading"></div>
+                <p class="spinner-text">Analyzing document...</p>
+            </div>
+            
+            <!-- Results Section -->
+            <div id="resultsSection" class="results-container">
+                <h2 class="results-header text-2xl font-bold">Analysis Results</h2>
+                
+                <div class="grid md:grid-cols-2 gap-6">
+                    <!-- Left Column -->
+                    <div>
+                        <div class="result-section">
+                            <h3 class="result-label">Triage Priority</h3>
+                            <p id="triagePriority" class="result-value">Analyzing...</p>
+                        </div>
+                        
+                        <div class="result-section">
+                            <h3 class="result-label">Appointment Type</h3>
+                            <p id="appointmentType" class="result-value">Analyzing...</p>
+                        </div>
+                        
+                        <div class="result-section">
+                            <h3 class="result-label">Visual Field Test</h3>
+                            <p id="visualFieldTest" class="result-value">Analyzing...</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Right Column -->
+                    <div>
+                        <div class="result-section">
+                            <h3 class="result-label">Key Clinical Findings</h3>
+                            <div id="clinicalFindings" class="result-value">Analyzing...</div>
+                        </div>
+                        
+                        <div class="result-section">
+                            <h3 class="result-label">Reasoning</h3>
+                            <p id="reasoning" class="result-value">Analyzing...</p>
+                        </div>
                     </div>
                 </div>
-
-                <div class="results-section" id="resultsSection" style="display: none;">
-                    <h2>Analysis Results</h2>
-                    <div class="results-container">
-                        <div class="result-item">
-                            <h3>Triage Priority</h3>
-                            <p id="triagePriority"></p>
-                        </div>
-                        <div class="result-item">
-                            <h3>Appointment Type</h3>
-                            <p id="appointmentType"></p>
-                        </div>
-                        <div class="result-item">
-                            <h3>Visual Field Test</h3>
-                            <p id="visualFieldTest"></p>
-                        </div>
-                        <div class="result-item full-width">
-                            <h3>Key Clinical Findings</h3>
-                            <p id="clinicalFindings"></p>
-                        </div>
-                        <div class="result-item full-width">
-                            <h3>Reasoning</h3>
-                            <p id="reasoning"></p>
-                        </div>
-                    </div>
+                
+                <!-- Action Buttons -->
+                <div class="mt-6 flex flex-wrap gap-3 justify-center">
+                    <button onclick="window.print()" class="px-5 py-2.5 text-sm font-medium text-gray-900 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-100 rounded-lg">
+                        <svg class="w-4 h-4 mr-2 inline" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v4h6v-4z" clip-rule="evenodd"></path>
+                        </svg>
+                        Print Results
+                    </button>
+                    <button onclick="location.reload()" class="px-5 py-2.5 text-sm font-medium text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg">
+                        Upload New Document
+                    </button>
                 </div>
-
-                <div class="loading-spinner" id="loadingSpinner" style="display: none;">
-                    <div class="spinner"></div>
-                    <p>Analyzing document...</p>
-                </div>
-            </main>
-        </div>
+            </div>
+        </section>
     </main>
+    
+    <!-- Footer -->
+    <footer>
+        <div class="max-w-screen-xl mx-auto px-4">
+            <p>&copy; 2025 GlaucomaTriage.AI. All rights reserved.</p>
+            <p class="text-sm mt-1">Developed for research and educational purposes. Not for clinical use without proper validation.</p>
+        </div>
+    </footer>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.3.0/flowbite.min.js"></script>
     <script src="main.js"></script>
