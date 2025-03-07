@@ -1,0 +1,9 @@
+[build]
+  publish = "public"
+  command = "echo 'No build command needed for static site deployment'"
+
+# Handle SPA routing by redirecting all paths to index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200 
