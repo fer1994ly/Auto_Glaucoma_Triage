@@ -1,8 +1,13 @@
-# Keep direct access to HTML files
-/*.html /index.html 200
+# All HTML files are served directly
+/*.html /:splat 200
+
+# CSS, JS, and images should be served directly
+/*.css /:splat 200
+/*.js /:splat 200
+/*.svg /:splat 200
 
 # API requests go to functions
-/functions/* /functions/:splat 200
+/functions/analyze /functions/analyze 200
 
-# All other routes, let the frontend handle routing
+# All other routes to index.html for SPA routing
 /* /index.html 200 

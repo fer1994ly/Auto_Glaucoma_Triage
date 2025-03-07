@@ -4,13 +4,12 @@
   "description": "Automated Glaucoma Referral Triage System using Gemini AI",
   "scripts": {
     "dev": "wrangler pages dev --compatibility-date=2023-06-21 --compatibility-flag=nodejs_compat",
-    "build": "echo 'Using public directory as build output'"
+    "build": "echo 'No build step required, using public directory as is'"
   },
   "dependencies": {
     "@google/generative-ai": "^0.2.0",
     "dotenv": "^16.3.1",
-    "node-fetch": "^2.7.0",
-    "pdf-parse": "^1.1.1"
+    "node-fetch": "^2.7.0"
   },
   "devDependencies": {
     "wrangler": "^3.114.0"

@@ -11,7 +11,11 @@ try {
 }
 
 // Process uploaded document
-async function processDocument(fileBuffer, mimeType) {
+async function processDocument(fileBuffer, mimeType, apiKey) {
+    if (!apiKey) {
+        throw new Error('Google API key is not configured. Please set the GOOGLE_API_KEY environment variable.');
+    }
+
     const systemPrompt = `Analyze this glaucoma referral document and provide a structured response with the following:
     1. Triage Priority: Urgent or Routine
     2. Appointment Type: Face-to-face or Virtual
@@ -40,29 +44,29 @@ async function processDocument(fileBuffer, mimeType) {
         text: systemPrompt
     });
 
-    // Process different file types
+    // For PDF files, we can extract text using a different approach in Cloudflare
+    // For now, we'll just send the raw PDF or image data as base64
+    const base64Data = fileBuffer.toString('base64');
+    
     if (mimeType === 'application/pdf') {
-        const pdfData = await pdfParse(fileBuffer);
-        requestData.contents[0].parts.push({
-            text: pdfData.text
-        });
-    } else if (mimeType.startsWith('image/')) {
-        // For images, we need to convert to base64
-        const base64Image = Buffer.from(fileBuffer).toString('base64');
+        // Send the PDF as text content (Gemini can process PDFs in base64)
         requestData.contents[0].parts.push({
             inline_data: {
                 mime_type: mimeType,
-                data: base64Image
+                data: base64Data
+            }
+        });
+    } else if (mimeType.startsWith('image/')) {
+        // For images, we send as inline data
+        requestData.contents[0].parts.push({
+            inline_data: {
+                mime_type: mimeType,
+                data: base64Data
             }
         });
     }
 
     try {
-        const apiKey = process.env.GOOGLE_API_KEY;
-        if (!apiKey) {
-            throw new Error('Google API key is not set. Please configure the GOOGLE_API_KEY environment variable.');
-        }
-
         const response = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
             {
@@ -135,11 +139,11 @@ export async function onRequestPost(context) {
             );
         }
 
-        // Get file as ArrayBuffer and convert to Buffer
+        // Get file as ArrayBuffer
         const arrayBuffer = await file.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
         
-        const analysis = await processDocument(buffer, file.type);
+        // Directly process the file with Google Gemini API
+        const analysis = await processDocument(arrayBuffer, file.type, context.env.GOOGLE_API_KEY);
         
         return new Response(
             JSON.stringify({ analysis }), 
