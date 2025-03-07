@@ -15,6 +15,24 @@ const port = process.env.PORT || 3000;
 app.use(express.static('public'));
 app.use(express.json());
 
+// Explicitly handle the root route
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Add routes for other HTML files
+app.get('/features', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'features.html'));
+});
+
+app.get('/contact', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'contact.html'));
+});
+
+app.get('/triage', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'triage.html'));
+});
+
 // Configure multer for file upload
 const storage = multer.memoryStorage();
 const upload = multer({ 
