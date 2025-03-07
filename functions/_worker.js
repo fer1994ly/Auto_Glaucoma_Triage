@@ -1,5 +1,5 @@
 // Export the handlers
-export { onRequest } from './[[path]].js';
+export { onRequest } from './index.js';
 export { onRequestPost } from './analyze.js';
 
 // Mark dependencies as external

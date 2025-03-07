@@ -1,13 +1,2 @@
-# All HTML files are served directly
-/*.html /:splat 200
-
-# CSS, JS, and images should be served directly
-/*.css /:splat 200
-/*.js /:splat 200
-/*.svg /:splat 200
-
-# API requests go to functions
 /functions/analyze /functions/analyze 200
-
-# All other routes to index.html for SPA routing
-/* /index.html 200 
+/* /index.html 200
