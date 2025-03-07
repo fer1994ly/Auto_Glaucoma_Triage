@@ -4,7 +4,7 @@
   "description": "Automated Glaucoma Referral Triage System using Gemini AI",
   "scripts": {
     "dev": "wrangler pages dev --compatibility-date=2023-06-21 --compatibility-flag=nodejs_compat",
-    "build": "mkdir -p dist && cp -r public/* dist/ && cd functions && npm install"
+    "build": "echo 'Using public directory as build output'"
   },
   "dependencies": {
     "@google/generative-ai": "^0.2.0",

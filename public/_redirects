@@ -1,2 +1,8 @@
-/functions/analyze /functions/analyze 200
+# Keep direct access to HTML files
+/*.html /index.html 200
+
+# API requests go to functions
+/functions/* /functions/:splat 200
+
+# All other routes, let the frontend handle routing
 /* /index.html 200 
