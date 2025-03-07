@@ -2,3 +2,6 @@ node_modules/
 .env
 *.pdf
 temp_image.b64
+
+# Cloudflare specific
+.dev.vars

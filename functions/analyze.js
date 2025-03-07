@@ -1,6 +1,14 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const pdfParse = require('pdf-parse');
-const fetch = require('node-fetch');
+// Use dynamic imports with try/catch for better error handling
+let GoogleGenerativeAI, pdfParse, fetch;
+
+try {
+  const generativeAI = require('@google/generative-ai');
+  GoogleGenerativeAI = generativeAI.GoogleGenerativeAI;
+  pdfParse = require('pdf-parse');
+  fetch = require('node-fetch');
+} catch (error) {
+  console.error('Error importing dependencies:', error);
+}
 
 // Process uploaded document
 async function processDocument(fileBuffer, mimeType) {
@@ -51,6 +59,10 @@ async function processDocument(fileBuffer, mimeType) {
 
     try {
         const apiKey = process.env.GOOGLE_API_KEY;
+        if (!apiKey) {
+            throw new Error('Google API key is not set. Please configure the GOOGLE_API_KEY environment variable.');
+        }
+
         const response = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
             {
@@ -81,6 +93,16 @@ async function processDocument(fileBuffer, mimeType) {
 
 export async function onRequestPost(context) {
     try {
+        if (!GoogleGenerativeAI || !pdfParse || !fetch) {
+            return new Response(
+                JSON.stringify({ error: 'Required dependencies not available' }), 
+                { 
+                    status: 500,
+                    headers: { 'Content-Type': 'application/json' }
+                }
+            );
+        }
+
         const formData = await context.request.formData();
         const file = formData.get('document');
         

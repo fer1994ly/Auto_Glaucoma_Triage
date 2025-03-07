@@ -75,20 +75,21 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsSection.style.display = 'none';
 
         try {
-            const response = await fetch('/analyze', {
+            const response = await fetch('/functions/analyze', {
                 method: 'POST',
                 body: formData
             });
 
             if (!response.ok) {
-                throw new Error('Network response was not ok');
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Server error');
             }
 
             const data = await response.json();
             displayResults(data.analysis);
         } catch (error) {
             console.error('Error:', error);
-            alert('An error occurred while processing the document. Please try again.');
+            alert(`Error: ${error.message || 'Failed to analyze document. Please try again.'}`);
         } finally {
             loadingSpinner.style.display = 'none';
         }

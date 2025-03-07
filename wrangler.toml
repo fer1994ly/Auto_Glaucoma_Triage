@@ -1,0 +1,16 @@
+[build]
+command = "npm run build"
+cwd = "."
+
+[build.upload]
+format = "service-worker"
+
+[site]
+bucket = "./public"
+
+[env.production]
+vars = { ENVIRONMENT = "production" }
+
+[[build.upload.rules]]
+type = "ESModule"
+globs = ["**/*.js"] 
