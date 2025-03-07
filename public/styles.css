@@ -6,6 +6,15 @@
     --text-secondary: #4b5563;
     --bg-primary: #f9fafb;
     --bg-secondary: #ffffff;
+    --text-color: #1f2937;
+    --text-light: #6b7280;
+    --border-color: #e5e7eb;
+    --bg-light: #f9fafb;
+    --white: #ffffff;
+    --focus-color: rgba(37, 99, 235, 0.5);
+    --transition-speed: 0.3s;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 * {
@@ -18,6 +27,10 @@ body {
     font-family: 'Inter', sans-serif;
     color: var(--text-primary);
     line-height: 1.5;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding-top: 3.5rem;
 }
 
 .container {
@@ -402,10 +415,22 @@ body {
 /* Loading spinner improvements */
 .spinner-container {
     display: none;
-    justify-content: center;
-    align-items: center;
-    padding: 2rem;
     flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: rgba(255, 255, 255, 0.9);
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    max-width: 400px;
+    animation: pulse 2s infinite ease-in-out;
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.1); }
+    70% { box-shadow: 0 0 0 10px rgba(37, 99, 235, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
 }
 
 .spinner {
@@ -455,22 +480,59 @@ body {
 }
 
 .result-value {
-    background-color: var(--light-color);
-    padding: 0.75rem;
-    border-radius: var(--border-radius);
-    font-weight: 500;
+    background-color: #f8fafc;
+    border: 1px solid #e5e7eb;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-top: 0.5rem;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: #374151;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.result-value:hover {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .priority-urgent {
-    color: var(--danger-color);
-    font-weight: 700;
-    background-color: rgba(220, 53, 69, 0.1);
+    color: #b91c1c;
+    font-weight: 600;
+    background-color: #fee2e2;
+    border-color: #fecaca;
+    position: relative;
+    padding-left: 1.5rem;
+}
+
+.priority-urgent::before {
+    content: "!";
+    position: absolute;
+    left: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-weight: bold;
+    font-size: 1rem;
 }
 
 .priority-routine {
-    color: var(--success-color);
-    font-weight: 700;
-    background-color: rgba(25, 135, 84, 0.1);
+    color: #15803d;
+    font-weight: 600;
+    background-color: #dcfce7;
+    border-color: #bbf7d0;
+    position: relative;
+    padding-left: 1.5rem;
+}
+
+.priority-routine::before {
+    content: "✓";
+    position: absolute;
+    left: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-weight: bold;
+    font-size: 0.875rem;
 }
 
 /* Findings list styling */
@@ -597,20 +659,20 @@ button:focus, a:focus, input:focus, .drop-zone:focus {
 /* Additional responsive styles */
 @media (max-width: 640px) {
     body {
-        padding-top: 60px;
+        padding-top: 2.5rem;
     }
     
     .results-container {
-        padding: 1.25rem;
+        padding: 1rem;
     }
     
     .result-section {
-        margin-bottom: 1rem;
+        margin-bottom: 0.75rem;
     }
     
     .result-value {
         padding: 0.5rem;
-        font-size: 0.9rem;
+        font-size: 0.875rem;
     }
     
     #clinicalFindings ul {
@@ -629,25 +691,28 @@ button:focus, a:focus, input:focus, .drop-zone:focus {
 /* Fix some layout issues on small devices */
 @media (max-width: 480px) {
     h1 {
-        font-size: 1.75rem;
+        font-size: 1.5rem;
+        line-height: 1.3;
+        margin-bottom: 0.5rem;
     }
     
     .drop-zone {
-        padding: 1.5rem 1rem;
+        padding: 1.25rem 0.75rem;
+        min-height: auto;
     }
     
     .upload-icon {
-        width: 48px;
-        height: 48px;
+        width: 40px;
+        height: 40px;
     }
     
     .mt-6 {
-        margin-top: 1rem;
+        margin-top: 0.75rem;
     }
     
     button {
-        width: 100%;
-        margin-bottom: 0.5rem;
+        padding: 0.375rem 0.75rem;
+        font-size: 0.875rem;
     }
 }
 
@@ -675,4 +740,358 @@ body {
 
 main {
     flex: 1;
+    padding-top: 1rem;
+}
+
+/* Adding CSS variables for better maintainability */
+:root {
+    --primary-color: #1d4ed8;
+    --primary-hover: #1e40af;
+    --text-color: #1f2937;
+    --text-light: #6b7280;
+    --border-color: #e5e7eb;
+    --bg-light: #f9fafb;
+    --white: #ffffff;
+    --focus-color: rgba(37, 99, 235, 0.5);
+    --transition-speed: 0.3s;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Fixes to prevent navbar from blocking content */
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding-top: 3.5rem;
+    font-family: 'Inter', sans-serif;
+}
+
+main {
+    flex: 1;
+    padding-top: 1rem;
+}
+
+@media (max-width: 640px) {
+    body {
+        padding-top: 2.5rem;
+    }
+    
+    .pt-24 {
+        padding-top: 4rem !important;
+    }
+    
+    nav {
+        height: auto;
+        min-height: 3rem;
+    }
+    
+    .results-container {
+        padding: 1rem;
+    }
+    
+    .result-section {
+        margin-bottom: 0.75rem;
+    }
+    
+    .result-value {
+        padding: 0.5rem;
+        font-size: 0.875rem;
+    }
+}
+
+/* Improved mobile navbar */
+nav {
+    box-shadow: var(--shadow-sm);
+}
+
+nav .text-xl {
+    font-size: 1.1rem;
+}
+
+@media (max-width: 768px) {
+    nav {
+        padding: 0;
+    }
+    
+    nav .p-4 {
+        padding: 0.5rem 1rem;
+    }
+    
+    .max-w-screen-xl {
+        padding: 0 0.75rem;
+    }
+    
+    #navbar-default {
+        margin-top: 0.25rem;
+        width: 100%;
+    }
+    
+    nav .text-lg, nav .text-xl {
+        font-size: 1rem;
+    }
+}
+
+/* Better responsive container for file upload */
+.upload-container {
+    margin-top: 0.5rem;
+}
+
+.drop-zone {
+    transition: all var(--transition-speed) ease;
+}
+
+@media (max-width: 480px) {
+    h1 {
+        font-size: 1.5rem;
+        line-height: 1.3;
+        margin-bottom: 0.5rem;
+    }
+    
+    .drop-zone {
+        padding: 1.25rem 0.75rem;
+        min-height: auto;
+    }
+    
+    .upload-icon {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .mt-6 {
+        margin-top: 0.75rem;
+    }
+    
+    button {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.875rem;
+    }
+}
+
+/* Print styles for better printing */
+@media print {
+    nav, footer, button {
+        display: none !important;
+    }
+    
+    body {
+        padding: 0;
+        background: white;
+    }
+    
+    main {
+        width: 100%;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .results-container {
+        box-shadow: none;
+        border: none;
+        padding: 0;
+    }
+    
+    h1 {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .result-value {
+        background-color: white;
+        border: 1px solid #ddd;
+    }
+}
+
+/* Enhanced accessibility */
+.visually-hidden:focus {
+    outline: none;
+}
+
+button:focus, a:focus, input:focus, .drop-zone:focus {
+    outline: 2px solid var(--focus-color);
+    outline-offset: 2px;
+}
+
+/* Performance optimizations */
+* {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Fixed footer */
+footer {
+    width: 100%;
+    padding: 0.75rem 0;
+    background-color: var(--white);
+    border-top: 1px solid var(--border-color);
+}
+
+/* Layout adjustments for better reading */
+#clinicalFindings ul {
+    padding-left: 1.5rem;
+    margin-top: 0.5rem;
+}
+
+#clinicalFindings li {
+    margin-bottom: 0.5rem;
+    position: relative;
+}
+
+#clinicalFindings li:last-child {
+    margin-bottom: 0;
+}
+
+/* Support for contrast modes */
+@media (prefers-contrast: more) {
+    .result-value, .drop-zone, button {
+        border-width: 2px;
+    }
+    
+    .priority-urgent, .priority-routine {
+        font-weight: 700;
+    }
+}
+
+/* Print optimizations */
+@media print {
+    .results-container {
+        page-break-inside: avoid;
+    }
+    
+    .result-section {
+        margin-bottom: 1.5rem;
+    }
+    
+    h1, h2, h3 {
+        page-break-after: avoid;
+    }
+    
+    .result-value {
+        page-break-inside: avoid;
+    }
+}
+
+/* Progressive enhancement for slower connections */
+@media (prefers-reduced-motion: reduce) {
+    .spinner, .fade-in, .notification {
+        animation: none !important;
+    }
+}
+
+/* Enhanced drag and drop experience */
+body.dragging:before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(59, 130, 246, 0.1);
+    border: 3px dashed rgba(59, 130, 246, 0.5);
+    z-index: 100;
+    pointer-events: none;
+    animation: pulseBorder 1.5s infinite;
+}
+
+@keyframes pulseBorder {
+    0% { border-color: rgba(59, 130, 246, 0.3); }
+    50% { border-color: rgba(59, 130, 246, 0.7); }
+    100% { border-color: rgba(59, 130, 246, 0.3); }
+}
+
+/* Responsive file info display */
+#fileInfo {
+    margin-top: 0.75rem;
+    padding: 0.5rem;
+    border-radius: 0.375rem;
+    background-color: rgba(239, 246, 255, 0.7);
+    border: 1px solid rgba(191, 219, 254, 0.5);
+    transition: all 0.2s ease;
+}
+
+#fileInfo:not(:empty) {
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from { transform: translateY(-10px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* Improve upload container */
+.upload-container {
+    transition: all 0.3s ease;
+}
+
+/* Add fade-out animation */
+.fade-out {
+    animation: fadeOut 0.3s ease-out forwards;
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+/* Loading state improvements */
+.spinner {
+    position: relative;
+    opacity: 0.85;
+}
+
+.spinner:before, .spinner:after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    border-top-color: rgba(59, 130, 246, 0.3);
+    width: 140%;
+    height: 140%;
+    animation: spin 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    top: -20%;
+    left: -20%;
+}
+
+.spinner:before {
+    animation-delay: -0.5s;
+}
+
+/* Responsive improvement for small devices */
+@media (max-width: 400px) {
+    .result-label {
+        font-size: 0.9rem;
+    }
+    
+    .spinner-text {
+        font-size: 0.85rem;
+    }
+    
+    .notification {
+        font-size: 0.85rem;
+        padding: 0.75rem 1rem;
+    }
+}
+
+/* Target high density displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .drop-zone {
+        background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' stroke='%232563EB' stroke-width='1.5' stroke-dasharray='6%2c 6' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
+    }
+}
+
+/* Dark mode optimizations */
+@media (prefers-color-scheme: dark) {
+    .drop-zone {
+        background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' stroke='%233b82f6' stroke-width='2' stroke-dasharray='6%2c 6' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
+    }
+    
+    body.dragging:before {
+        background-color: rgba(30, 64, 175, 0.15);
+        border-color: rgba(59, 130, 246, 0.7);
+    }
+    
+    #fileInfo {
+        background-color: rgba(30, 58, 138, 0.1);
+        border-color: rgba(59, 130, 246, 0.3);
+    }
 } 

@@ -23,10 +23,41 @@ document.addEventListener('DOMContentLoaded', () => {
     
     Note: Face-to-face appointments are mandatory if gonioscopy is needed.`;
 
+    // Enhanced tracking of app state
+    let appState = {
+        isProcessing: false,
+        hasResults: false,
+        currentFile: null,
+        fileProcessed: false
+    };
+
+    // Track drag events
+    let dragCounter = 0;
+
     // Prevent default drag behaviors
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         dropZone.addEventListener(eventName, preventDefaults, false);
         document.body.addEventListener(eventName, preventDefaults, false);
+    });
+
+    // Enhanced drag and drop experience
+    document.body.addEventListener('dragenter', () => {
+        dragCounter++;
+        if (!appState.isProcessing) {
+            document.body.classList.add('dragging');
+        }
+    });
+
+    document.body.addEventListener('dragleave', () => {
+        dragCounter--;
+        if (dragCounter === 0) {
+            document.body.classList.remove('dragging');
+        }
+    });
+
+    document.body.addEventListener('drop', () => {
+        dragCounter = 0;
+        document.body.classList.remove('dragging');
     });
 
     // Highlight drop zone when dragging over it
@@ -44,6 +75,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Handle file input change
     fileInput.addEventListener('change', (e) => {
         handleFiles(e.target.files);
+    });
+
+    // Enhanced keyboard accessibility
+    dropZone.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            fileInput.click();
+        }
     });
 
     // Click on drop zone triggers file input
@@ -73,6 +112,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleFiles(files) {
         if (files.length === 0) return;
         
+        // Stop if already processing
+        if (appState.isProcessing) {
+            showNotification('Please wait until the current document is processed', 'warning');
+            return;
+        }
+        
         const file = files[0];
         const allowedTypes = ['application/pdf', 'image/tiff', 'image/jpeg', 'image/png'];
         
@@ -81,27 +126,59 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        fileInfo.textContent = `Selected file: ${file.name}`;
+        // Update file info with additional details
+        const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+        fileInfo.innerHTML = `
+            <div class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                <span class="font-medium">${file.name}</span>
+                <span class="text-xs text-gray-500">(${fileSizeMB} MB)</span>
+            </div>
+        `;
+        
+        appState.currentFile = file;
         uploadFile(file);
     }
 
     async function uploadFile(file) {
+        // Update app state
+        appState.isProcessing = true;
+        appState.fileProcessed = false;
+        
         const formData = new FormData();
         formData.append('document', file);
         formData.append('prompt', aiPrompt); // Include the AI prompt in the request
 
+        // Show loading spinner with progress indication
         loadingSpinner.style.display = 'flex';
         resultsSection.style.display = 'none';
+        
+        // Hide previous results if any
+        if (appState.hasResults) {
+            resultsSection.classList.remove('fade-in');
+            resultsSection.classList.add('fade-out');
+        }
 
         try {
             // For demonstration purposes, use a mock response without calling the API
             // This makes the app work without requiring backend functionality
             showNotification('Processing document...', 'info');
             
+            // Update UI to show processing steps
+            updateProcessingStatus('Analyzing document...');
+            
             setTimeout(() => {
-                // Using the defined AI prompt for mock analysis
-                // This would be replaced with actual API call in production
-                const mockAnalysis = `
+                updateProcessingStatus('Extracting clinical data...');
+                
+                setTimeout(() => {
+                    updateProcessingStatus('Determining recommendations...');
+                    
+                    setTimeout(() => {
+                        // Using the defined AI prompt for mock analysis
+                        // This would be replaced with actual API call in production
+                        const mockAnalysis = `
 1. Triage Priority: Urgent
 2. Appointment Type: Face-to-face
 3. Visual Field Test Requirement: Required
@@ -112,13 +189,29 @@ document.addEventListener('DOMContentLoaded', () => {
    - Visual field test shows significant peripheral vision loss
    - Patient reports headaches and blurred vision
 5. Reasoning: The combination of elevated IOP, increased cup-to-disc ratio, and visual symptoms indicates advanced glaucomatous damage requiring urgent face-to-face evaluation. Gonioscopy is needed to evaluate angle structures.
-                `;
-                displayResults(mockAnalysis);
-                showNotification('Analysis complete!', 'success');
-            }, 2000); // Simulate 2-second delay
+                        `;
+                        
+                        displayResults(mockAnalysis);
+                        appState.isProcessing = false;
+                        appState.hasResults = true;
+                        appState.fileProcessed = true;
+                        
+                        showNotification('Analysis complete!', 'success');
+                    }, 800);
+                }, 700);
+            }, 500); // Simulate staged processing
         } catch (error) {
             console.error('Error:', error);
+            appState.isProcessing = false;
+            loadingSpinner.style.display = 'none';
             showNotification(error.message || 'Failed to analyze document. Please try again.', 'error');
+        }
+    }
+
+    function updateProcessingStatus(message) {
+        const spinnerText = document.querySelector('.spinner-text');
+        if (spinnerText) {
+            spinnerText.textContent = message;
         }
     }
 
@@ -162,7 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Apply color-coding based on priority
         const priorityElement = document.getElementById('triagePriority');
-        priorityElement.className = ''; // Reset classes
+        priorityElement.className = 'result-value'; // Reset classes
         if (triagePriority.toLowerCase().includes('urgent')) {
             priorityElement.classList.add('priority-urgent');
         } else {
@@ -172,32 +265,90 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('appointmentType').textContent = appointmentType;
         document.getElementById('visualFieldTest').textContent = visualFieldTest;
         
-        // Display clinical findings as bullet points
+        // Display clinical findings as bullet points with animated rendering
         const findingsElement = document.getElementById('clinicalFindings');
         if (clinicalFindings.length > 0) {
             const ul = document.createElement('ul');
-            clinicalFindings.forEach(finding => {
-                const li = document.createElement('li');
-                li.textContent = finding;
-                ul.appendChild(li);
-            });
             findingsElement.innerHTML = '';
             findingsElement.appendChild(ul);
+            
+            // Add items with a slight delay for visual effect
+            clinicalFindings.forEach((finding, index) => {
+                setTimeout(() => {
+                    const li = document.createElement('li');
+                    li.textContent = finding;
+                    li.style.opacity = '0';
+                    ul.appendChild(li);
+                    
+                    setTimeout(() => {
+                        li.style.transition = 'opacity 0.3s ease';
+                        li.style.opacity = '1';
+                    }, 50);
+                }, index * 100);
+            });
         } else {
             findingsElement.textContent = 'None specified';
         }
         
         document.getElementById('reasoning').textContent = reasoning;
 
-        // Show results section with animation
+        // Show results section with enhanced animation
         resultsSection.style.display = 'block';
+        resultsSection.classList.remove('fade-out');
         resultsSection.classList.add('fade-in');
         
-        // Scroll to results
-        resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Scroll to results with smooth animation
+        setTimeout(() => {
+            resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 300);
+        
+        // Add "New Analysis" button for better UX
+        addNewAnalysisButton();
     }
     
-    // Notification system
+    function addNewAnalysisButton() {
+        // Only add the button if it doesn't exist already
+        if (!document.getElementById('newAnalysisBtn')) {
+            const actionButtons = document.querySelector('.mt-4.sm\\:mt-6');
+            if (actionButtons) {
+                const newBtn = document.createElement('button');
+                newBtn.id = 'newAnalysisBtn';
+                newBtn.className = 'px-3 py-1.5 sm:px-4 sm:py-2 text-sm font-medium text-gray-900 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-100 rounded-lg';
+                newBtn.innerHTML = `
+                    <svg class="w-4 h-4 mr-2 inline" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                        <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"></path>
+                    </svg>
+                    New Analysis
+                `;
+                newBtn.addEventListener('click', () => {
+                    resetToUploadState();
+                });
+                
+                actionButtons.appendChild(newBtn);
+            }
+        }
+    }
+    
+    function resetToUploadState() {
+        // Reset app state
+        appState.hasResults = false;
+        appState.currentFile = null;
+        appState.fileProcessed = false;
+        
+        // Hide results and show upload
+        resultsSection.style.display = 'none';
+        fileInfo.innerHTML = '';
+        
+        // Scroll to upload area
+        dropZone.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        
+        // Focus on drop zone for accessibility
+        setTimeout(() => {
+            dropZone.focus();
+        }, 500);
+    }
+    
+    // Enhanced notification system
     function showNotification(message, type = 'info') {
         // Remove any existing notifications
         const existingNotification = document.querySelector('.notification');
@@ -215,19 +366,29 @@ document.addEventListener('DOMContentLoaded', () => {
         closeBtn.className = 'close-notification';
         closeBtn.innerHTML = '&times;';
         closeBtn.onclick = function() {
-            notification.remove();
+            notification.classList.add('fade-out');
+            setTimeout(() => notification.remove(), 500);
         };
         notification.appendChild(closeBtn);
         
         // Add to document
         document.body.appendChild(notification);
         
+        // Add accessibility attributes
+        notification.setAttribute('role', 'alert');
+        notification.setAttribute('aria-live', 'assertive');
+        
         // Auto-remove after delay (except for errors)
         if (type !== 'error') {
             setTimeout(() => {
                 notification.classList.add('fade-out');
                 setTimeout(() => notification.remove(), 500);
-            }, 3000);
+            }, 4000);
         }
     }
+    
+    // Initial accessibility focus
+    setTimeout(() => {
+        dropZone.focus();
+    }, 1000);
 }); 
