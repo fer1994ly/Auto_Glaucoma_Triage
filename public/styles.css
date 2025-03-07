@@ -592,4 +592,87 @@ footer {
 button:focus, a:focus, input:focus, .drop-zone:focus {
     outline: 3px solid rgba(13, 110, 253, 0.5);
     outline-offset: 2px;
+}
+
+/* Additional responsive styles */
+@media (max-width: 640px) {
+    body {
+        padding-top: 60px;
+    }
+    
+    .results-container {
+        padding: 1.25rem;
+    }
+    
+    .result-section {
+        margin-bottom: 1rem;
+    }
+    
+    .result-value {
+        padding: 0.5rem;
+        font-size: 0.9rem;
+    }
+    
+    #clinicalFindings ul {
+        padding-left: 1rem;
+    }
+    
+    .notification {
+        width: 90%;
+        right: 5%;
+        left: 5%;
+        padding: 12px 20px;
+        font-size: 0.9rem;
+    }
+}
+
+/* Fix some layout issues on small devices */
+@media (max-width: 480px) {
+    h1 {
+        font-size: 1.75rem;
+    }
+    
+    .drop-zone {
+        padding: 1.5rem 1rem;
+    }
+    
+    .upload-icon {
+        width: 48px;
+        height: 48px;
+    }
+    
+    .mt-6 {
+        margin-top: 1rem;
+    }
+    
+    button {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* Improve navbar on mobile */
+@media (max-width: 767px) {
+    nav {
+        padding: 0.5rem 0;
+    }
+    
+    #navbar-default {
+        margin-top: 0.5rem;
+    }
+}
+
+/* Ensure the page takes up full height to keep footer at bottom */
+html, body {
+    height: 100%;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+main {
+    flex: 1;
 } 
