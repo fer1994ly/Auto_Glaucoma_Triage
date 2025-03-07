@@ -2,10 +2,11 @@
   "name": "auto-glaucoma-triage",
   "version": "1.0.0",
   "description": "Automated Glaucoma Referral Triage System using Gemini AI",
-  "main": "main.js",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "vercel-build": "echo 'Building for Vercel deployment'"
   },
   "dependencies": {
     "@google/generative-ai": "^0.2.0",
@@ -18,5 +19,8 @@
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=14.0.0"
   }
-} 
+}
